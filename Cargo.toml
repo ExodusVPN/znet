@@ -1,0 +1,26 @@
+[package]
+name = "net2"
+version = "0.1.0"
+authors = ["luozijun <luozijun.assistant@protonmail.com>"]
+
+[dependencies]
+log = "0.4"
+
+cfg-if = "0.1"
+bitflags = "1.0"
+byteorder = "1.2.1"
+ipnetwork = "0.12"
+
+[dependencies.smoltcp]
+git = "https://github.com/m-labs/smoltcp.git"
+branch = "master"
+default-features = false
+features = [
+    "std", "log",
+    "proto-ipv4", "proto-ipv6",
+    "socket-icmp", "socket-udp", "socket-tcp"
+]
+
+[target.'cfg(unix)'.dependencies.nix]
+git = "https://github.com/nix-rust/nix.git"
+rev = "29eca60c18cab1c02479b72cc3215a7c9cd5921f"
