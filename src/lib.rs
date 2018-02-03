@@ -3,7 +3,6 @@ extern crate cfg_if;
 #[cfg(unix)]
 extern crate nix;
 extern crate ipnetwork;
-extern crate hwaddr;
 extern crate smoltcp;
 
 

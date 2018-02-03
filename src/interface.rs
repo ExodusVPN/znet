@@ -12,8 +12,7 @@ use std::ffi::CString;
 
 pub type Flags = InterfaceFlags;
 
-// #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Interface {
     name : String,
     index: u32,
@@ -150,13 +149,15 @@ fn fill (ifaddr: &InterfaceAddress, iface: &mut Interface){
         match sock_addr {
             SockAddr::Inet(inet_addr) => {
                 let std_ip = inet_addr.to_std().ip();
-                assert_eq!(ifaddr.netmask.is_some(), true);
 
-                let prefix = match ifaddr.netmask.unwrap() {
-                    SockAddr::Inet(inet_addr) => {
-                        ip_mask_to_prefix(inet_addr.to_std().ip()).unwrap()
+                let prefix = match ifaddr.netmask {
+                    Some(inet) => match inet {
+                        SockAddr::Inet(inet_addr) => {
+                            ip_mask_to_prefix(inet_addr.to_std().ip()).unwrap()
+                        },
+                        _ => { unreachable!() }
                     },
-                    _ => { unreachable!() }
+                    None => 0,
                 };
 
                 iface.addrs.push(IpNetwork::new(std_ip, prefix).unwrap());
@@ -175,7 +176,7 @@ fn fill (ifaddr: &InterfaceAddress, iface: &mut Interface){
                       target_os = "android",
                       target_os = "linux"))]
             SockAddr::Link(link_addr) => {
-                iface.hwaddr = Some(EthernetAddress::from_bytes(&link_addr.addr()));
+                iface.hwaddr = Some(EthernetAddress(link_addr.addr()));
             }
         }
     }
