@@ -63,13 +63,12 @@ impl Interface {
     }
 
     pub fn is_tap(&self) -> bool {
-        !self.is_loopback() 
-        && self.flags.contains(Flags::IFF_BROADCAST)
+        self.flags.contains(Flags::IFF_BROADCAST)
     }
 
     pub fn is_tun(&self) -> bool {
-        // IFF_NO_PI
-        !self.is_tap()
+        !self.is_loopback() 
+        && !self.is_tap()
         && self.flags.contains(Flags::IFF_POINTOPOINT)
     }
 
@@ -222,7 +221,7 @@ pub fn interfaces () -> Vec<Interface> {
 
                 hwaddr   : None,
                 dstaddr  : None,
-                addrs: vec![]
+                addrs: vec![],
             };
             fill(&ifaddr, &mut iface);
             ifaces.push(iface);
