@@ -8,10 +8,7 @@ extern crate smoltcp;
 
 use nix::libc;
 
-pub use ipnetwork::{
-    IpNetwork, Ipv4Network, Ipv6Network, IpNetworkError,
-    ip_mask_to_prefix, ipv4_mask_to_prefix, ipv6_mask_to_prefix,
-};
+use ipnetwork::ip_mask_to_prefix;
 pub use smoltcp::wire::{
     EthernetAddress,
     IpAddress, Ipv4Address, Ipv6Address,

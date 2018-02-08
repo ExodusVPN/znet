@@ -3,10 +3,9 @@ use nix::ifaddrs::{InterfaceAddress, getifaddrs};
 use nix::net::if_::InterfaceFlags;
 use nix::sys::socket::SockAddr;
 
-use ::{ip_mask_to_prefix, IpNetwork, EthernetAddress, sys};
+use ::{sys, ip_mask_to_prefix, IpAddress, IpCidr, EthernetAddress};
 
 use std::{io, fmt};
-use std::net::{IpAddr, Ipv4Addr};
 use std::ffi::CString;
 
 
@@ -19,8 +18,8 @@ pub struct Interface {
     flags: Flags,
     mtu  : u32,
     hwaddr: Option<EthernetAddress>,
-    dstaddr: Option<Ipv4Addr>,
-    addrs: Vec<IpNetwork>,
+    dstaddr: Option<IpCidr>,
+    addrs: Vec<IpCidr>,
 }
 
 impl Interface {
@@ -92,11 +91,11 @@ impl Interface {
         self.hwaddr
     }
 
-    pub fn dstaddr(&self) -> Option<Ipv4Addr> {
+    pub fn dstaddr(&self) -> Option<IpCidr> {
         self.dstaddr
     }
 
-    pub fn addrs(&self) -> &Vec<IpNetwork> {
+    pub fn addrs(&self) -> &Vec<IpCidr> {
         &self.addrs
     }
 }
@@ -113,28 +112,29 @@ impl fmt::Display for Interface {
         if self.hwaddr.is_some(){
             let _ = write!(f, "\n    ether {}", self.hwaddr.unwrap());
         }
-        for ip_network in self.addrs.iter() {
-            match ip_network {
-                &IpNetwork::V4(ipv4_network) => {
+        for ip_cidr in self.addrs.iter() {
+            match ip_cidr {
+                &IpCidr::Ipv4(ipv4_network) => {
                     if self.flags.contains(Flags::IFF_BROADCAST) {
                         let _ = write!(f, "\n    inet {} netmask {}",
                                         ipv4_network,
-                                        ipv4_network.mask());
-                        let _ = write!(f, " broadcast {}", ipv4_network.broadcast());
+                                        ipv4_network.netmask());
+                        let _ = write!(f, " broadcast {}", ipv4_network.broadcast().unwrap());
                     } else if self.flags.contains(Flags::IFF_POINTOPOINT) {
-                        let _ = write!(f, "\n    inet {} netmask {}", ipv4_network, ipv4_network.mask());
+                        let _ = write!(f, "\n    inet {} netmask {}", ipv4_network, ipv4_network.netmask());
                         if self.flags.contains(Flags::IFF_BROADCAST) {
-                            let _ = write!(f, " broadcast {}", ipv4_network.broadcast());
+                            let _ = write!(f, " broadcast {}", ipv4_network.broadcast().unwrap());
                         }
                     } else {
                         let _ = write!(f, "\n    inet {} netmask {}",
-                                        ipv4_network.ip(),
-                                        ipv4_network.mask());
+                                        ipv4_network.address(),
+                                        ipv4_network.netmask());
                     }
                 }
-                &IpNetwork::V6(ipv6_network) => {
+                &IpCidr::Ipv6(ipv6_network) => {
                     let _ = write!(f, "\n    inet6 {}", ipv6_network);
                 }
+                _ => { unreachable!() }
             }
         }
 
@@ -159,7 +159,7 @@ fn fill (ifaddr: &InterfaceAddress, iface: &mut Interface){
                     None => 0,
                 };
 
-                iface.addrs.push(IpNetwork::new(std_ip, prefix).unwrap());
+                iface.addrs.push(IpCidr::new(IpAddress::from(std_ip), prefix));
             },
             SockAddr::Unix(_) => { },
             #[cfg(any(target_os = "android", target_os = "linux"))]
@@ -184,12 +184,9 @@ fn fill (ifaddr: &InterfaceAddress, iface: &mut Interface){
         let sock_addr = ifaddr.destination.unwrap();
         match sock_addr {
             SockAddr::Inet(inet_addr) => {
-                match inet_addr.to_std().ip() {
-                    IpAddr::V4(v4_addr) => {
-                        iface.dstaddr = Some(v4_addr);
-                    },
-                    _ => {}
-                }
+                let std_ip = inet_addr.to_std().ip();
+                assert_eq!(std_ip.is_ipv4(), true);
+                iface.dstaddr = Some(IpCidr::new(IpAddress::from(std_ip), 32));
             },
             _ => {}
         }

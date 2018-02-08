@@ -1,10 +1,10 @@
-#![cfg(any(target_os = "macos", target_os = "freebsd", target_os = "linux"))]
-
-extern crate net2;
 extern crate smoltcp;
+extern crate net2;
 
-use net2::raw_socket::{LinkLayer, RawSocket, BufferReader};
 use smoltcp::wire;
+
+#[cfg(any(target_os = "macos", target_os = "freebsd", target_os = "linux"))]
+use net2::raw_socket::{LinkLayer, RawSocket, BufferReader};
 
 use std::env;
 
