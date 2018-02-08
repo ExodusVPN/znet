@@ -20,10 +20,13 @@ pub use smoltcp::wire::{
 
 
 mod sys;
+
 #[cfg(any(target_os = "macos", target_os = "freebsd", target_os = "linux"))]
 pub mod interface;
-// #[cfg(any(target_os = "macos", target_os = "freebsd", target_os = "linux"))]
-// pub mod raw_socket;
+
+#[cfg(any(target_os = "macos", target_os = "freebsd", target_os = "linux"))]
+pub mod raw_socket;
+
 pub mod stack {
     pub use super::smoltcp::socket::TcpSocket;
     pub use super::smoltcp::socket::UdpSocket;
