@@ -59,10 +59,6 @@ impl<'a> BufferReader<'a> {
 impl<'a> Iterator for BufferReader<'a> {
     type Item = (usize, usize);
 
-    // fn next(&mut self) -> Option<Self::Item> {
-    //     Some(self.offset)
-    // }
-
     #[cfg(any(target_os = "macos", target_os = "freebsd"))]
     fn next(&mut self) -> Option<Self::Item> {
         let len = self.len();
@@ -83,7 +79,6 @@ impl<'a> Iterator for BufferReader<'a> {
                 let epos = offset + bh_hdrlen + bh_datalen;
                 let pos = (bpos, epos);
                 Some(pos)
-                // Some(bh_datalen)
             }
         }
     }
@@ -98,7 +93,6 @@ impl<'a> Iterator for BufferReader<'a> {
             self.start = start + len;
             let pos = (start, len);
             Some(pos)
-            // Some(len)
         }
     }
 }
