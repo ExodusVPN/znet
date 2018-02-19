@@ -37,6 +37,7 @@ impl fmt::Display for LinkLayer {
 }
 
 pub struct BufferReader<'a> {
+    #[allow(dead_code)]
     buffer: &'a [u8],
     len: usize,
     offset: usize,
@@ -86,12 +87,12 @@ impl<'a> Iterator for BufferReader<'a> {
     #[cfg(all(target_os = "linux"))]
     fn next(&mut self) -> Option<Self::Item> {
         let len = self.len;
-        let start = self.start;
-        if start >= len  {
+        let offset = self.offset;
+        if offset >= len  {
             None
         } else {
-            self.start = start + len;
-            let pos = (start, len);
+            self.offset = offset + len;
+            let pos = (offset, len);
             Some(pos)
         }
     }

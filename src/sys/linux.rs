@@ -2,10 +2,11 @@
 use libc;
 use sys;
 
+use std::str;
 use std::io;
 use std::ptr;
 use std::mem;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 
 #[cfg(target_env = "gnu")]
 type FLAG_TYPE = libc::c_ulong;
@@ -110,9 +111,7 @@ pub fn if_name_to_mtu(name: &str) -> Result<usize, io::Error> {
     }
 
     let fd = unsafe {
-        sys::socket(sys::AF_PACKET,
-                    sys::SOCK_RAW | sys::SOCK_NONBLOCK,
-                    sys::ETH_P_ALL)
+        sys::socket(sys::AF_INET, sys::SOCK_DGRAM, 0)
     };
 
     if fd == -1 {
