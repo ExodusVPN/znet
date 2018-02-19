@@ -9,7 +9,6 @@ log = "0.4"
 cfg-if = "0.1"
 bitflags = "1.0"
 byteorder = "1.2.1"
-ipnetwork = "0.12"
 
 [dependencies.smoltcp]
 git = "https://github.com/m-labs/smoltcp.git"

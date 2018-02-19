@@ -2,13 +2,11 @@
 extern crate cfg_if;
 #[cfg(unix)]
 extern crate nix;
-extern crate ipnetwork;
 extern crate smoltcp;
 
 
 use nix::libc;
 
-use ipnetwork::ip_mask_to_prefix;
 pub use smoltcp::wire::{
     EthernetAddress,
     IpAddress, Ipv4Address, Ipv6Address,

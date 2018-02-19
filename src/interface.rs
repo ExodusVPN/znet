@@ -3,13 +3,74 @@ use nix::ifaddrs::{InterfaceAddress, getifaddrs};
 use nix::net::if_::InterfaceFlags;
 use nix::sys::socket::SockAddr;
 
-use ::{sys, ip_mask_to_prefix, IpAddress, IpCidr, EthernetAddress};
+use smoltcp;
+use ::{sys, IpAddress, Ipv6Address, IpCidr, Ipv4Cidr, Ipv6Cidr, EthernetAddress};
 
 use std::{io, fmt};
 use std::ffi::CString;
-
+use std::net::Ipv6Addr;
 
 pub type Flags = InterfaceFlags;
+
+
+pub fn ipv6_cidr_from_ipv6_mask(address: Ipv6Addr, netmask: Ipv6Addr) -> Result<Ipv6Cidr, smoltcp::Error> {
+    const IPV6_SEGMENT_BITS: u8 = 16;
+
+    let mask = netmask.segments();
+    let mut mask_iter = mask.into_iter();
+
+    let mut prefix = 0;
+    for &segment in &mut mask_iter {
+        if segment == 0xffff {
+            prefix += IPV6_SEGMENT_BITS;
+        } else if segment == 0 {
+            break;
+        } else {
+            let prefix_bits = (!segment).leading_zeros() as u8;
+            if segment << prefix_bits != 0 {
+                return Err(smoltcp::Error::Illegal);
+            }
+            prefix += prefix_bits;
+            break;
+        }
+    }
+
+    for &segment in mask_iter {
+        if segment != 0 {
+            return Err(smoltcp::Error::Illegal);
+        }
+    }
+
+    Ok(Ipv6Cidr::new(Ipv6Address::from(address), prefix))
+}
+
+pub fn ip_cidr_from_netmask(addr: IpAddress, netmask: IpAddress) -> Result<IpCidr, smoltcp::Error> {
+    match addr {
+        IpAddress::Ipv4(v4_addr) => {
+            match netmask {
+                IpAddress::Ipv4(v4_netmask) => {
+                    match Ipv4Cidr::from_netmask(v4_addr, v4_netmask) {
+                        Ok(v4_cidr) => Ok(IpCidr::Ipv4(v4_cidr)),
+                        Err(e) => Err(e)
+                    }
+                },
+                _ => Err(smoltcp::Error::Illegal)
+            }
+        }
+        IpAddress::Ipv6(v6_addr) => {
+            match netmask {
+                IpAddress::Ipv6(v6_netmask) => {
+                    match ipv6_cidr_from_ipv6_mask(Ipv6Addr::from(v6_addr), Ipv6Addr::from(v6_netmask)) {
+                        Ok(v6_cidr) => Ok(IpCidr::Ipv6(v6_cidr)),
+                        Err(e) => Err(e)
+                    }
+                },
+                _ => Err(smoltcp::Error::Illegal)
+            }
+        }
+        _ => unreachable!()
+    }
+}
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Interface {
@@ -114,21 +175,21 @@ impl fmt::Display for Interface {
         }
         for ip_cidr in self.addrs.iter() {
             match ip_cidr {
-                &IpCidr::Ipv4(ipv4_network) => {
+                &IpCidr::Ipv4(ipv4_cidr) => {
                     if self.flags.contains(Flags::IFF_BROADCAST) {
                         let _ = write!(f, "\n    inet {} netmask {}",
-                                        ipv4_network,
-                                        ipv4_network.netmask());
-                        let _ = write!(f, " broadcast {}", ipv4_network.broadcast().unwrap());
+                                        ipv4_cidr,
+                                        ipv4_cidr.netmask());
+                        let _ = write!(f, " broadcast {}", ipv4_cidr.broadcast().unwrap());
                     } else if self.flags.contains(Flags::IFF_POINTOPOINT) {
-                        let _ = write!(f, "\n    inet {} netmask {}", ipv4_network, ipv4_network.netmask());
+                        let _ = write!(f, "\n    inet {} netmask {}", ipv4_cidr, ipv4_cidr.netmask());
                         if self.flags.contains(Flags::IFF_BROADCAST) {
-                            let _ = write!(f, " broadcast {}", ipv4_network.broadcast().unwrap());
+                            let _ = write!(f, " broadcast {}", ipv4_cidr.broadcast().unwrap());
                         }
                     } else {
                         let _ = write!(f, "\n    inet {} netmask {}",
-                                        ipv4_network.address(),
-                                        ipv4_network.netmask());
+                                        ipv4_cidr.address(),
+                                        ipv4_cidr.netmask());
                     }
                 }
                 &IpCidr::Ipv6(ipv6_network) => {
@@ -148,18 +209,16 @@ fn fill (ifaddr: &InterfaceAddress, iface: &mut Interface){
         match sock_addr {
             SockAddr::Inet(inet_addr) => {
                 let std_ip = inet_addr.to_std().ip();
-
-                let prefix = match ifaddr.netmask {
+                
+                let netmask = match ifaddr.netmask {
                     Some(inet) => match inet {
-                        SockAddr::Inet(inet_addr) => {
-                            ip_mask_to_prefix(inet_addr.to_std().ip()).unwrap()
-                        },
+                        SockAddr::Inet(inet_addr) => inet_addr.to_std().ip(),
                         _ => { unreachable!() }
                     },
-                    None => 0,
+                    None => { unreachable!() },
                 };
 
-                iface.addrs.push(IpCidr::new(IpAddress::from(std_ip), prefix));
+                iface.addrs.push(ip_cidr_from_netmask(IpAddress::from(std_ip), IpAddress::from(netmask)).unwrap());
             },
             SockAddr::Unix(_) => { },
             #[cfg(any(target_os = "android", target_os = "linux"))]
