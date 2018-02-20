@@ -18,11 +18,8 @@ use sys;
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub enum LinkLayer {
-    /// Ethernet Frame
     Eth,
-    /// Raw IP Packet (IPv4 Packet / IPv6 Packet)
     Ip,
-    /// IP Packet With Packet Information
     IpWithPI(usize),
 }
 
@@ -160,7 +157,6 @@ impl RawSocket {
         
         let mtu = sys::if_name_to_mtu(ifname).unwrap();
 
-
         Ok(RawSocket { fd: fd, dt: link_layer, blen: mtu })
     }
     
@@ -297,34 +293,28 @@ impl RawSocket {
     pub fn with_ifname(ifname: &str) -> Result<RawSocket, io::Error> {
         match RawSocket::open_bpf() {
             Ok(bpf_fd) => {
-                // Set header complete mode
                 RawSocket::set_option(bpf_fd, sys::BIOCSHDRCMPLT, 1).unwrap();
-                // Monitor packets sent from our interface
                 RawSocket::set_option(bpf_fd, sys::BIOCSSEESENT, 1).unwrap();
-                // Return immediately when a packet received
                 RawSocket::set_option(bpf_fd, sys::BIOCIMMEDIATE, 1).unwrap();
-                // Set buffer length ( 100 KB )
                 RawSocket::set_option(bpf_fd, sys::BIOCSBLEN, 1024*100).unwrap();
-                // set the timeout
                 RawSocket::set_timeout(bpf_fd, Duration::from_secs(3)).unwrap();
-                // bind to netif
+                
                 #[repr(C)]
                 struct ifreq {
                     pub ifr_name: [sys::c_char; sys::IF_NAMESIZE],
                     pub ifru_addr: sys::sockaddr,
                 }
-
                 let mut iface: ifreq = unsafe { mem::zeroed() };
                 for (i, byte) in ifname.bytes().enumerate() {
                     iface.ifr_name[i] = byte as sys::c_char;
                 }
 
+                if unsafe { sys::ioctl(bpf_fd, sys::BIOCSETIF, &iface) } < 0 {
+                    return Err(io::Error::last_os_error());
+                }
+
                 // non-blocking I/O.
                 if unsafe { sys::ioctl(bpf_fd, sys::FIONBIO as u64, &iface) } < 0 {
-                    return Err(io::Error::last_os_error());
-                } 
-
-                if unsafe { sys::ioctl(bpf_fd, sys::BIOCSETIF, &iface) } < 0 {
                     return Err(io::Error::last_os_error());
                 }
                 

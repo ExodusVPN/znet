@@ -20,10 +20,10 @@ pub fn ipv6_cidr_from_ipv6_mask(address: Ipv6Addr, netmask: Ipv6Addr) -> Result<
     let mask = netmask.segments();
     let mut mask_iter = mask.into_iter();
 
-    let mut prefix = 0u8;
+    let mut prefix_len = 0u8;
     for &segment in &mut mask_iter {
         if segment == 0xffff {
-            prefix += IPV6_SEGMENT_BITS;
+            prefix_len += IPV6_SEGMENT_BITS;
         } else if segment == 0 {
             break;
         } else {
@@ -31,7 +31,7 @@ pub fn ipv6_cidr_from_ipv6_mask(address: Ipv6Addr, netmask: Ipv6Addr) -> Result<
             if segment << prefix_bits != 0 {
                 return Err(smoltcp::Error::Illegal);
             }
-            prefix += prefix_bits;
+            prefix_len += prefix_bits;
             break;
         }
     }
@@ -42,33 +42,26 @@ pub fn ipv6_cidr_from_ipv6_mask(address: Ipv6Addr, netmask: Ipv6Addr) -> Result<
         }
     }
 
-    Ok(Ipv6Cidr::new(Ipv6Address::from(address), prefix))
+    Ok(Ipv6Cidr::new(Ipv6Address::from(address), prefix_len))
 }
 
 pub fn ip_cidr_from_netmask(addr: IpAddress, netmask: IpAddress) -> Result<IpCidr, smoltcp::Error> {
     match addr {
         IpAddress::Ipv4(v4_addr) => {
             match netmask {
-                IpAddress::Ipv4(v4_netmask) => {
-                    match Ipv4Cidr::from_netmask(v4_addr, v4_netmask) {
-                        Ok(v4_cidr) => Ok(IpCidr::Ipv4(v4_cidr)),
-                        Err(e) => Err(e)
-                    }
-                },
+                IpAddress::Ipv4(v4_netmask) => Ok(IpCidr::Ipv4(Ipv4Cidr::from_netmask(v4_addr, v4_netmask)?)),
                 _ => Err(smoltcp::Error::Illegal)
             }
-        }
+        },
         IpAddress::Ipv6(v6_addr) => {
             match netmask {
                 IpAddress::Ipv6(v6_netmask) => {
-                    match ipv6_cidr_from_ipv6_mask(Ipv6Addr::from(v6_addr), Ipv6Addr::from(v6_netmask)) {
-                        Ok(v6_cidr) => Ok(IpCidr::Ipv6(v6_cidr)),
-                        Err(e) => Err(e)
-                    }
+                    let v6_cidr = ipv6_cidr_from_ipv6_mask(Ipv6Addr::from(v6_addr), Ipv6Addr::from(v6_netmask))?;
+                    Ok(IpCidr::Ipv6(v6_cidr))
                 },
                 _ => Err(smoltcp::Error::Illegal)
             }
-        }
+        },
         _ => unreachable!()
     }
 }
