@@ -7,6 +7,7 @@ authors = ["luozijun <luozijun.assistant@protonmail.com>"]
 log = "0.4"
 
 cfg-if = "0.1"
+
 bitflags = "1.0"
 byteorder = "1.2.1"
 
@@ -20,6 +21,15 @@ features = [
     "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"
 ]
 
-[target.'cfg(unix)'.dependencies.nix]
-git = "https://github.com/nix-rust/nix.git"
-branch = "master"
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+# libc = { git = "https://github.com/rust-lang/libc.git", branch = "master" }
+nix  = { git = "https://github.com/nix-rust/nix.git",   branch = "master" }
+
+
+
+[target.'cfg(target_os = "macos")'.dependencies]
+system-configuration = { git = "https://github.com/mullvad/system-configuration-rs.git", branch = "master" }
+pfctl = "0.1"
+core-foundation = "0.5"
+core-foundation-sys = "0.5.1"
