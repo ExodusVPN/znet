@@ -2,20 +2,24 @@
 #[allow(unused_imports)]
 #[cfg(target_os = "macos")]
 mod platform {
-    use core_foundation::base::{CFType, TCFType, CFAllocator};
-    use core_foundation::array::{CFArray, CFArrayRef, FromVoid, ItemRef};
+    // https://developer.apple.com/documentation/systemconfiguration
+    // https://developer.apple.com/library/content/documentation/Networking/Conceptual/SystemConfigFrameworks/SC_UnderstandSchema/SC_UnderstandSchema.html#//apple_ref/doc/uid/TP40001065-CH203-CHDEJACB
+
+    use core_foundation::ConcreteCFType;
+    use core_foundation::base::{CFType, CFTypeRef, TCFType, TCFTypeRef, CFAllocator};
+    use core_foundation::array::{CFArray, CFArrayRef};
     use core_foundation::string::{__CFString, CFString, CFStringRef};
     use core_foundation::runloop::{CFRunLoop, kCFRunLoopCommonModes};
     use core_foundation::set::CFSet;
     use core_foundation::date::CFDate;
     use core_foundation::bundle::CFBundle;
     use core_foundation::boolean::{CFBooleanRef, CFBoolean, kCFBooleanTrue};
-    use core_foundation::dictionary::{CFDictionary, CFDictionaryRef};
+    use core_foundation::dictionary::{CFDictionary, CFDictionaryRef, CFMutableDictionary, CFMutableDictionaryRef};
     use core_foundation::propertylist::CFPropertyList;
 
-    use core_foundation_sys::base::{CFAllocatorRef, kCFAllocatorDefault, Boolean};
-    use core_foundation_sys::array::{ CFArrayGetCount, CFArrayGetValueAtIndex};
-    use core_foundation_sys::number::__CFBoolean;
+    use core_foundation::base::{CFAllocatorRef, kCFAllocatorDefault, Boolean};
+    use core_foundation::array::{ CFArrayGetCount, CFArrayGetValueAtIndex};
+    use core_foundation::number::__CFBoolean;
 
     use system_configuration::dynamic_store::{
         SCDynamicStore, SCDynamicStoreBuilder, SCDynamicStoreCallBackContext
@@ -27,6 +31,8 @@ mod platform {
     use std::mem;
     use std::ptr;
     use std::net::IpAddr;
+    use std::string::ToString;
+
 
     const SESSION_NAME: &str = "ExodusVPN";
     
@@ -50,7 +56,7 @@ mod platform {
     pub type __SCPreferences = libc::c_void;
     pub type SCPreferencesRef = *const __SCPreferences;
     
-
+    // /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/Headers
     #[link(name = "SystemConfiguration", kind = "framework")]
     extern "C" {
         pub fn SCPreferencesCreate(allocator: CFAllocatorRef,
@@ -58,7 +64,7 @@ mod platform {
                                    prefsID: CFStringRef) -> SCPreferencesRef;
         pub fn SCNetworkServiceCopyAll(prefs: SCPreferencesRef) -> CFArrayRef;
         pub fn SCNetworkServiceCopy(prefs: SCPreferencesRef,
-                                   serviceID: CFStringRef) -> SCNetworkServiceRef;
+                                    serviceID: CFStringRef) -> SCNetworkServiceRef;
         pub fn SCNetworkServiceGetEnabled(service: SCNetworkServiceRef) -> Boolean;
         pub fn SCNetworkServiceGetInterface(service: SCNetworkServiceRef) -> SCNetworkInterfaceRef;
         pub fn SCNetworkServiceGetName(service: SCNetworkServiceRef) -> CFStringRef;
@@ -85,7 +91,8 @@ mod platform {
         pub fn SCNetworkInterfaceGetExtendedConfiguration(interface: SCNetworkInterfaceRef,
                                                           extendedType: CFStringRef) -> CFDictionaryRef;
 
-        pub fn SCNetworkInterfaceSetConfiguration(interface: SCNetworkInterfaceRef, config: CFDictionaryRef) -> Boolean;
+        pub fn SCNetworkInterfaceSetConfiguration(interface: SCNetworkInterfaceRef,
+                                                  config: CFDictionaryRef) -> Boolean;
         pub fn SCNetworkInterfaceSetExtendedConfiguration(interface: SCNetworkInterfaceRef,
                                                           extendedType: CFStringRef,
                                                           config: CFDictionaryRef) -> Boolean;
@@ -115,19 +122,34 @@ mod platform {
         pub router: Option<IpAddr>
     }
 
+    impl NetworkGlobal {
+        pub fn service(&self) -> Option<SCNetworkService> {
+            None
+        }
+
+        pub fn interface(&self) -> Option<SCNetworkInterface> {
+            None
+        }
+
+        pub fn router(&self) -> Option<IpAddr> {
+            None
+        }
+    }
+
     pub fn get_network_global() -> NetworkGlobal {
         let store = SCDynamicStoreBuilder::new(SESSION_NAME).build();
         
-        let key = CFString::from_static_string("State:/Network/Global/IPv4");
+        let key = "State:/Network/Global/IPv4";
 
         let mut service: Option<SCNetworkService> = None;
         let mut interface: Option<SCNetworkInterface> = None;
         let mut router: Option<IpAddr> = None;
 
         if let Some(value) = store.get(key.clone()) {
-            if let Some(dict) = value.downcast_into::<CFDictionary>() {
-                if let Some(val) = dict.find2(&CFString::from_static_string("PrimaryService")) {
-                    let value = unsafe { CFType::wrap_under_get_rule(val) };
+            if let Some(dict) = value.downcast::<CFDictionary>() {
+                let d_key = CFString::from_static_string("PrimaryService").as_concrete_TypeRef().as_void_ptr();
+                if let Some(val) = dict.find(d_key) {
+                    let value = unsafe { CFType::wrap_under_get_rule(*val) };
                     if let Some(service_id) = value.downcast::<CFString>() {
                         let service_id = service_id.to_string();
 
@@ -142,11 +164,11 @@ mod platform {
             }
         }
 
-
         if let Some(value) = store.get(key.clone()) {
             if let Some(dict) = value.downcast_into::<CFDictionary>() {
-                if let Some(val) = dict.find2(&CFString::from_static_string("PrimaryInterface")) {
-                    let value = unsafe { CFType::wrap_under_get_rule(val) };
+                let d_key = CFString::from_static_string("PrimaryInterface").as_concrete_TypeRef().as_void_ptr();
+                if let Some(val) = dict.find(d_key) {
+                    let value = unsafe { CFType::wrap_under_get_rule(*val) };
                     if let Some(ifname) = value.downcast::<CFString>() {
                         for iface in list_network_interfaces(){
                             let bsd_name = iface.bsd_name();
@@ -162,8 +184,9 @@ mod platform {
 
         if let Some(value) = store.get(key) {
             if let Some(dict) = value.downcast_into::<CFDictionary>() {
-                if let Some(val) = dict.find2(&CFString::from_static_string("Router")) {
-                    let value = unsafe { CFType::wrap_under_get_rule(val) };
+                let d_key = CFString::from_static_string("Router").as_concrete_TypeRef().as_void_ptr();
+                if let Some(val) = dict.find(d_key) {
+                    let value = unsafe { CFType::wrap_under_get_rule(*val) };
                     if let Some(router_str) = value.downcast::<CFString>() {
                         let router_str = router_str.to_string();
                         match router_str.parse::<IpAddr>() {
@@ -225,19 +248,21 @@ mod platform {
 
             if let Some(value) = store.get(CFString::new(&format!("State:/Network/Service/{}/DNS", self.id()))) {
                 if let Some(dict) = value.downcast_into::<CFDictionary>() {
-                    if let Some(domain_name) = dict.find2(&CFString::from_static_string("DomainName")) {
-                        let domain_name = unsafe { CFType::wrap_under_get_rule(domain_name) };
+                    let d_key = CFString::from_static_string("DomainName").as_concrete_TypeRef().as_void_ptr();
+                    if let Some(domain_name) = dict.find(d_key) {
+                        let domain_name = unsafe { CFType::wrap_under_get_rule(*domain_name) };
                         if let Some(domain_name) = domain_name.downcast::<CFString>() {
                             default_domain_name = Some(domain_name.to_string());
                         }
                     }
 
-                    if let Some(addrs) = dict.find2(&CFString::from_static_string("ServerAddresses")) {
-                        let addrs = unsafe { CFType::wrap_under_get_rule(addrs) };
-                        if let Some(addrs) = addrs.downcast::<CFArray<CFString>>() {
+                    let d_key = CFString::from_static_string("ServerAddresses").as_concrete_TypeRef().as_void_ptr();
+                    if let Some(addrs) = dict.find(d_key) {
+                        let addrs = unsafe { CFType::wrap_under_get_rule(*addrs) };
+                        if let Some(addrs) = addrs.downcast::<CFArray<CFTypeRef>>() {
                             let mut temp = Vec::new();
                             for addr in addrs.iter() {
-                                if let Ok(ip_addr) = addr.to_string().parse::<IpAddr>() {
+                                if let Ok(ip_addr) = unsafe { CFString::wrap_under_get_rule(*addr as *const _).to_string().parse::<IpAddr>() } {
                                     temp.push(ip_addr);
                                 }
                             }
@@ -252,19 +277,19 @@ mod platform {
 
             if let Some(value) = store.get(CFString::new(&format!("Setup:/Network/Service/{}/DNS", self.id()))) {
                 if let Some(dict) = value.downcast_into::<CFDictionary>() {
-                    if let Some(domain_name) = dict.find2(&CFString::from_static_string("DomainName")) {
-                        let domain_name = unsafe { CFType::wrap_under_get_rule(domain_name) };
+                    if let Some(domain_name) = dict.find(CFString::from_static_string("DomainName").as_concrete_TypeRef().as_void_ptr()) {
+                        let domain_name = unsafe { CFType::wrap_under_get_rule(*domain_name) };
                         if let Some(domain_name) = domain_name.downcast::<CFString>() {
                             manually_specifying_domain_name = Some(domain_name.to_string());
                         }
                     }
 
-                    if let Some(addrs) = dict.find2(&CFString::from_static_string("ServerAddresses")) {
-                        let addrs = unsafe { CFType::wrap_under_get_rule(addrs) };
-                        if let Some(addrs) = addrs.downcast::<CFArray<CFString>>() {
+                    if let Some(addrs) = dict.find(CFString::from_static_string("ServerAddresses").as_concrete_TypeRef().as_void_ptr()) {
+                        let addrs = unsafe { CFType::wrap_under_get_rule(*addrs) };
+                        if let Some(addrs) = addrs.downcast::<CFArray<CFTypeRef>>() {
                             let mut temp = Vec::new();
                             for addr in addrs.iter() {
-                                if let Ok(ip_addr) = addr.to_string().parse::<IpAddr>() {
+                                if let Ok(ip_addr) = unsafe { CFString::wrap_under_get_rule(*addr as *const _).to_string().parse::<IpAddr>() } {
                                     temp.push(ip_addr);
                                 }
                             }
@@ -288,16 +313,21 @@ mod platform {
         pub fn set_dns(&self, addrs: Vec<IpAddr>) -> bool {
             let store = SCDynamicStoreBuilder::new(SESSION_NAME).build();
 
-            let server_addresses_key = CFString::from_static_string("ServerAddresses");
+            let mut dns_dictionary = CFMutableDictionary::new();
+            let d_keys = CFString::from_static_string("ServerAddresses");
+            let d_values = CFArray::from_CFTypes(
+                                &addrs
+                                .iter()
+                                .map(|s| CFString::new(&format!("{}", s)) )
+                                .collect::<Vec<CFString>>());
+            
+            dns_dictionary.add(
+                &d_keys.as_concrete_TypeRef().as_void_ptr(),
+                &d_values.as_concrete_TypeRef().as_void_ptr());
+            let dns_dictionary = dns_dictionary.as_CFType().downcast::<CFDictionary>().unwrap();
 
-            let cf_string_servers: Vec<CFString> = addrs.iter().map(|s| CFString::new(&format!("{}", s)) ).collect();
-            let server_addresses_value = CFArray::from_CFTypes(&cf_string_servers);
-
-            let dns_dictionary = CFDictionary::from_CFType_pairs(&[(server_addresses_key, server_addresses_value)]);
-
-            let key = CFString::new(&format!("Setup:/Network/Service/{}/DNS", self.id()));
-
-            if store.set(key, dns_dictionary) {
+            let key = format!("Setup:/Network/Service/{}/DNS", self.id());
+            if store.set(key.as_ref(), dns_dictionary) {
                 true
             } else {
                 false
@@ -441,7 +471,7 @@ mod platform {
         // let array: CFArray<SCNetworkServiceRef> = unsafe { CFArray::wrap_under_get_rule( SCNetworkSetCopyServices(netset) ) };
         array.get_all_values()
                           .iter()
-                          .map(|service_ptr: &*const libc::c_void| SCNetworkService(*service_ptr) )
+                          .map(|service_ptr| SCNetworkService(*service_ptr) )
                           .collect::<Vec<SCNetworkService>>()
 
     }
@@ -450,7 +480,7 @@ mod platform {
         let array: CFArray<SCNetworkInterfaceRef> = unsafe { CFArray::wrap_under_get_rule(SCNetworkInterfaceCopyAll()) };
         array.get_all_values()
                           .iter()
-                          .map(|interface_ptr: &*const libc::c_void| SCNetworkInterface(*interface_ptr) )
+                          .map(|interface_ptr| SCNetworkInterface(*interface_ptr) )
                           .collect::<Vec<SCNetworkInterface>>()
     }
 }

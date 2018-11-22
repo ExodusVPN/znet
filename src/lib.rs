@@ -13,7 +13,6 @@ extern crate smoltcp;
 cfg_if! {
     if #[cfg(target_os = "macos")] {
         extern crate core_foundation;
-        extern crate core_foundation_sys;
         extern crate system_configuration;
     }
 }
