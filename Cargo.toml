@@ -8,15 +8,16 @@ log = "0.4"
 cfg-if = "0.1"
 bitflags = "1.0"
 byteorder = "1.2.1"
+termion = "1.5"
+rustty = "0.1"
+
 
 [dependencies.smoltcp]
-git = "https://github.com/m-labs/smoltcp.git"
-branch = "master"
+version = "0.5"
 default-features = false
 features = [
-    "std", "log",
-    "proto-ipv4", "proto-ipv6",
-    "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"
+    "std",
+    "proto-ipv4", "proto-ipv6", "proto-igmp", "proto-dhcpv4",
 ]
 
 [target.'cfg(unix)'.dependencies]
