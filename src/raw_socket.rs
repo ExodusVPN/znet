@@ -144,7 +144,9 @@ impl RawSocket {
             println!("get if flags fail ...");
             return Err(io::Error::last_os_error());
         }
-        ifr.ifr_flags |= sys::IFF_PROMISC;
+        unsafe {
+            ifr.ifru.flags |= sys::IFF_PROMISC;
+        }
         if unsafe { sys::ioctl(fd, sys::SIOCSIFFLAGS, &ifr) } < 0 {
             println!("set if flags fail ...");
             return Err(io::Error::last_os_error());
