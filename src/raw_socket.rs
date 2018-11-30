@@ -100,11 +100,36 @@ impl<'a> Iterator for BufferReader<'a> {
 pub struct RawSocket {
     fd: sys::c_int,
     dt: LinkLayer,
+    ifname: String,
     blen: usize,
 }
 
 #[cfg(all(target_os = "linux", target_env = "gnu"))]
 impl RawSocket {
+    pub fn enable_promiscuous_mode(&mut self) -> Result<(), io::Error> {
+        let fd = self.fd;
+        
+        unsafe {
+            let mut ifr: sys::ifreq = mem::zeroed();
+            
+            for (i, byte) in self.ifname.bytes().enumerate() {
+                ifr.ifr_name[i] = byte as sys::c_char;
+            }
+
+            if sys::ioctl(fd, sys::SIOCGIFFLAGS, &ifr) < 0 {
+                return Err(io::Error::last_os_error());
+            }
+            
+            ifr.ifru.flags |= sys::IFF_PROMISC as i16;
+
+            if sys::ioctl(fd, sys::SIOCSIFFLAGS, &ifr) < 0 {
+                return Err(io::Error::last_os_error());
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn with_ifname(ifname: &str) -> Result<RawSocket, io::Error> {
         let flags = sys::if_name_to_flags(ifname).unwrap();
         // IFF_PROMISC
@@ -135,22 +160,20 @@ impl RawSocket {
             return Err(io::Error::last_os_error())
         }
         
-        let mut ifr: sys::ifreq = unsafe { mem::zeroed() };
-        for (i, byte) in ifname.bytes().enumerate() {
-            ifr.ifr_name[i] = byte as sys::c_char;
-        }
+        // let mut ifr: sys::ifreq = unsafe { mem::zeroed() };
+        // for (i, byte) in ifname.bytes().enumerate() {
+        //     ifr.ifr_name[i] = byte as sys::c_char;
+        // }
 
-        if unsafe { sys::ioctl(fd, sys::SIOCGIFFLAGS, &ifr) } < 0 {
-            println!("get if flags fail ...");
-            return Err(io::Error::last_os_error());
-        }
-        unsafe {
-            ifr.ifru.flags |= sys::IFF_PROMISC as i16;
-        }
-        if unsafe { sys::ioctl(fd, sys::SIOCSIFFLAGS, &ifr) } < 0 {
-            println!("set if flags fail ...");
-            return Err(io::Error::last_os_error());
-        }
+        // if unsafe { sys::ioctl(fd, sys::SIOCGIFFLAGS, &ifr) } < 0 {
+        //     return Err(io::Error::last_os_error());
+        // }
+        // unsafe {
+        //     ifr.ifru.flags |= sys::IFF_PROMISC as i16;
+        // }
+        // if unsafe { sys::ioctl(fd, sys::SIOCSIFFLAGS, &ifr) } < 0 {
+        //     return Err(io::Error::last_os_error());
+        // }
 
         let ifindex = sys::if_name_to_index(ifname);
 
@@ -174,7 +197,7 @@ impl RawSocket {
         
         let mtu = sys::if_name_to_mtu(ifname).unwrap();
 
-        Ok(RawSocket { fd: fd, dt: link_layer, blen: mtu })
+        Ok(RawSocket { fd: fd, dt: link_layer, blen: mtu, ifname: ifname.to_string() })
     }
     
     pub fn link_layer(&self) -> LinkLayer {
@@ -306,6 +329,30 @@ impl RawSocket {
             Ok(blen)
         }
     }
+    
+    pub fn enable_promiscuous_mode(&mut self) -> Result<(), io::Error> {
+        let bpf_fd = self.fd;
+
+        unsafe {
+            let mut ifr: sys::ifreq = mem::zeroed();
+            
+            for (i, byte) in self.ifname.bytes().enumerate() {
+                ifr.ifr_name[i] = byte as sys::c_char;
+            }
+
+            if sys::ioctl(bpf_fd, sys::SIOCGIFFLAGS, &ifr) < 0 {
+                return Err(io::Error::last_os_error());
+            }
+            
+            ifr.ifru.flags |= sys::IFF_PROMISC as i16;
+
+            if sys::ioctl(bpf_fd, sys::SIOCSIFFLAGS, &ifr) < 0 {
+                return Err(io::Error::last_os_error());
+            }
+        }
+
+        Ok(())
+    }
 
     pub fn with_ifname(ifname: &str) -> Result<RawSocket, io::Error> {
         match RawSocket::open_bpf() {
@@ -316,11 +363,7 @@ impl RawSocket {
                 RawSocket::set_option(bpf_fd, sys::BIOCSBLEN, 1024*100).unwrap();
                 RawSocket::set_timeout(bpf_fd, Duration::from_secs(3)).unwrap();
                 
-                // #[repr(C)]
-                // struct ifreq {
-                //     pub ifr_name: [sys::c_char; sys::IF_NAMESIZE],
-                //     // pub ifru_addr: sys::sockaddr,
-                // }
+                
 
                 let mut iface: sys::ifreq = unsafe { mem::zeroed() };
                 for (i, byte) in ifname.bytes().enumerate() {
@@ -330,26 +373,6 @@ impl RawSocket {
                 if unsafe { sys::ioctl(bpf_fd, sys::BIOCSETIF, &iface) } < 0 {
                     return Err(io::Error::last_os_error());
                 }
-
-                let mut ifr: sys::ifreq = unsafe { mem::zeroed() };
-                for (i, byte) in ifname.bytes().enumerate() {
-                    ifr.ifr_name[i] = byte as sys::c_char;
-                }
-
-                if unsafe { sys::ioctl(bpf_fd, sys::SIOCGIFFLAGS, &ifr) } < 0 {
-                    println!("get flag : IFF_PROMISC fail..", );
-                    // return Err(io::Error::last_os_error());
-                }
-
-                unsafe {
-                    ifr.ifru.flags |= sys::IFF_PROMISC as i16;
-                }
-
-                if unsafe { sys::ioctl(bpf_fd, sys::SIOCSIFFLAGS, &ifr) } < 0 {
-                    println!("set flag : IFF_PROMISC fail..", );
-                    // return Err(io::Error::last_os_error());
-                }
-
 
                 // non-blocking I/O.
                 if unsafe { sys::ioctl(bpf_fd, sys::FIONBIO as u64, &iface) } < 0 {
@@ -363,7 +386,7 @@ impl RawSocket {
                     _ => return Err(io::Error::new(io::ErrorKind::Other, "Unknow LinkLayer"))
                 };
                 let blen = RawSocket::get_blen(bpf_fd).unwrap();
-                Ok(RawSocket { fd: bpf_fd, dt: link_layer, blen: blen })
+                Ok(RawSocket { fd: bpf_fd, dt: link_layer, blen: blen, ifname: ifname.to_string() })
             },
             Err(e) => Err(e)
         }

@@ -18,8 +18,6 @@ pub const SIOCGIFADDR: FLAG_TYPE = 0x8915;
 
 pub const SIOCGIFHWADDR: FLAG_TYPE = 0x8927;
 
-// pub const SIOCSIFFLAGS: FLAG_TYPE = 0x8914;
-
 pub const SIOCSIFMTU: FLAG_TYPE = 0x00008922;
 
 pub const SIOCGIFMETRIC: FLAG_TYPE = 0x0000891d;
@@ -160,7 +158,7 @@ pub fn if_name_to_flags(ifname: &str) -> Result<i32, io::Error> {
     Ok(req.ifr_flags as i32)
 }
 
-pub fn if_index_to_name(ifindex: u32) -> String{
+pub fn if_index_to_name(ifindex: u32) -> String {
     let ifname_buf: [u8; libc::IF_NAMESIZE] = [0u8; libc::IF_NAMESIZE];
     unsafe {
         let ifname_cstr = CStr::from_bytes_with_nul_unchecked(&ifname_buf);
