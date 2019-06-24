@@ -13,17 +13,6 @@ type FLAG_TYPE = libc::c_ulong;
 #[cfg(target_env = "musl")]
 type FLAG_TYPE = libc::c_int;
 
-#[cfg(target_env = "musl")]
-extern "C" {
-    pub fn sysctl(name: *mut libc::c_int,
-                  namelen: libc::c_int,
-                  oldp: *mut libc::c_void,
-                  oldlenp: *mut libc::size_t,
-                  newp: *mut libc::c_void,
-                  newlen: libc::size_t)
-                  -> libc::c_int;
-
-}
 
 pub const CTL_NET: libc::c_int  = 3;        // Networking
     
