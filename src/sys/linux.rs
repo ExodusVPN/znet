@@ -13,13 +13,13 @@ type FLAG_TYPE = libc::c_ulong;
 #[cfg(target_env = "musl")]
 type FLAG_TYPE = libc::c_int;
 
-pub const CTL_NET: c_int  = 3;        // Networking
+pub const CTL_NET: libc::c_int  = 3;        // Networking
     
-pub const NET_IPV4: c_int = 5;
-pub const NET_IPV6: c_int = 12;
+pub const NET_IPV4: libc::c_int = 5;
+pub const NET_IPV6: libc::c_int = 12;
     
-pub const NET_IPV4_FORWARD: c_int    = 8;
-pub const NET_IPV6_FORWARDING: c_int = 1;
+pub const NET_IPV4_FORWARD: libc::c_int    = 8;
+pub const NET_IPV6_FORWARDING: libc::c_int = 1;
 
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/linux/sockios.h
@@ -125,7 +125,7 @@ pub fn if_name_to_mtu(name: &str) -> Result<usize, io::Error> {
     }
     
     let ret = unsafe {
-        sys::ioctl(fd, sys::SIOCGIFMTU, &mut ifreq as *mut ifreq)
+        sys::ioctl(fd, sys::SIOCGIFMTU as _, &mut ifreq as *mut ifreq)
     };
 
     unsafe { libc::close(fd) };
@@ -158,7 +158,7 @@ pub fn if_name_to_flags(ifname: &str) -> Result<i32, io::Error> {
         ptr::copy_nonoverlapping(ifname.as_ptr() as *const sys::c_char,
                                  req.ifr_name.as_mut_ptr(),
                                  ifname.len());
-        let ret = sys::ioctl(fd, sys::SIOCGIFFLAGS, &req);
+        let ret = sys::ioctl(fd, sys::SIOCGIFFLAGS as _, &req);
         if ret == -1 {
             return Err(io::Error::last_os_error());
         }
