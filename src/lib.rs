@@ -18,7 +18,7 @@ cfg_if! {
 }
 
 
-mod sys;
+pub mod sys;
 
 
 #[cfg(any(target_os = "macos", target_os = "freebsd", target_os = "linux"))]
