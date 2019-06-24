@@ -1,5 +1,5 @@
 [package]
-name = "net2"
+name = "znet"
 version = "0.1.0"
 authors = ["luozijun <luozijun.assistant@protonmail.com>"]
 edition = "2018"
