@@ -3,7 +3,9 @@ name = "net2"
 version = "0.1.0"
 authors = ["luozijun <luozijun.assistant@protonmail.com>"]
 edition = "2018"
-
+exclude = [
+    "c/",
+]
 
 [dependencies]
 log = "0.4"
