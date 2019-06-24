@@ -14,8 +14,7 @@ type FLAG_TYPE = libc::c_ulong;
 type FLAG_TYPE = libc::c_int;
 
 #[cfg(target_env = "musl")]
-#[link(name = "util")]
-extern {
+extern "C" {
     pub fn sysctl(name: *mut libc::c_int,
                   namelen: libc::c_int,
                   oldp: *mut libc::c_void,
