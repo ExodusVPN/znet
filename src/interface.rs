@@ -221,6 +221,8 @@ fn fill(ifaddr: &InterfaceAddress, iface: &mut Interface){
             SockAddr::Unix(_) => { },
             #[cfg(any(target_os = "android", target_os = "linux"))]
             SockAddr::Netlink(_) => { },
+            #[cfg(any(target_os = "android", target_os = "linux"))]
+            SockAddr::Alg(_) => { },
             #[cfg(any(target_os = "ios", target_os = "macos"))]
             SockAddr::SysControl(_) => { },
             #[cfg(any(target_os = "dragonfly",
