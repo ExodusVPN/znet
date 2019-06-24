@@ -1,16 +1,15 @@
+use crate::sys;
 
+use smoltcp;
+use smoltcp::wire::{IpAddress, Ipv6Address, IpCidr, Ipv4Cidr, Ipv6Cidr, EthernetAddress};
 use nix::ifaddrs::{InterfaceAddress, getifaddrs};
 use nix::net::if_::InterfaceFlags;
 use nix::sys::socket::SockAddr;
 
-use smoltcp;
-use smoltcp::wire::{IpAddress, Ipv6Address, IpCidr, Ipv4Cidr, Ipv6Cidr, EthernetAddress};
-
-use crate::sys;
-
 use std::{io, fmt};
 use std::ffi::CString;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
 
 pub type Flags = InterfaceFlags;
 

@@ -3,7 +3,7 @@ use crate::sys;
 
 use std::ptr;
 use std::mem;
-
+use std::io;
 
 pub fn add() {
 
@@ -84,7 +84,7 @@ unsafe fn sa_to_addr(sa: *mut sys::sockaddr) -> (RouteAddr, *mut u8) {
 }
 
 
-fn req(family: sys::c_int, flags: sys::c_int) -> Result<(*mut u8, usize), ()> {
+fn req(family: sys::c_int, flags: sys::c_int) -> Result<(*mut u8, usize), io::Error> {
     let mut mib: [sys::c_int; 6] = [0; 6];
     let mut lenp: sys::size_t = 0;
 
@@ -98,23 +98,23 @@ fn req(family: sys::c_int, flags: sys::c_int) -> Result<(*mut u8, usize), ()> {
     let mib_ptr = &mib as *const sys::c_int as *mut sys::c_int;
 
     if unsafe { sys::sysctl(mib_ptr, 6, ptr::null_mut(), &mut lenp, ptr::null_mut(), 0) } < 0 {
-        return Err(());
+        return Err(io::Error::last_os_error());
     }
 
     let mut buf: Vec<sys::c_char> = Vec::with_capacity(lenp as usize);
     let buf_ptr: *mut u8 = buf.as_mut_ptr() as _;
     if unsafe { sys::sysctl(mib_ptr, 6, buf_ptr as _, &mut lenp, ptr::null_mut(), 0) } < 0 {
-        return Err(());
+        return Err(io::Error::last_os_error());
     }
 
     if buf_ptr.is_null() {
-        return Err(());
+        return Err(io::Error::last_os_error());
     }
 
     Ok((buf_ptr, lenp))
 }
 
-pub fn iter() -> Result<RouteTableMessageIter, ()> {
+pub fn iter() -> Result<RouteTableMessageIter, io::Error> {
     // let family = sys::AF_INET;
     // let family = sys::AF_INET6;
     let family = 0;  // inet4 & inet6
@@ -167,6 +167,6 @@ impl Iterator for RouteTableMessageIter {
 }
 
 
-pub fn list() -> Result<Vec<RouteTableMessage>, ()> {
+pub fn list() -> Result<Vec<RouteTableMessage>, io::Error> {
     iter().map(|handle| handle.collect::<Vec<_>>())
 }

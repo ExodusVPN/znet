@@ -1,3 +1,5 @@
+use crate::sys;
+
 
 use std::fmt;
 use std::io;
@@ -12,8 +14,6 @@ cfg_if! {
         use std::time::Duration;
     }
 }
-
-use crate::sys;
 
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]

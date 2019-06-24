@@ -124,8 +124,12 @@ mod platform {
 
     impl NetworkGlobal {
         /// 需要 Root 权限
-        pub fn set_global_dns(&self, addrs: &[ IpAddr ]) -> bool {
+        pub fn set_global_dns(&self, addrs: &[ IpAddr ]) -> Result<bool, std::io::Error> {
             // https://00f.net/2011/08/14/programmatically-changing-network-configuration-on-osx/
+            if unsafe { libc::getuid() } != 0 {
+                return Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied));
+            }
+
             let store = SCDynamicStoreBuilder::new(SESSION_NAME).build();
 
             let mut dns_dictionary = CFMutableDictionary::new();
@@ -147,9 +151,10 @@ mod platform {
                     for item in keys.iter() {
                         store.set(item.clone(), dns_dictionary.clone());
                     }
-                    true
+
+                    Ok(true)
                 },
-                None => false,
+                None => Ok(false),
             }
         }
     }
@@ -329,10 +334,14 @@ mod platform {
         }
 
         /// 需要 ROOT 权限执行
-        pub fn set_dns(&self, addrs: &[ IpAddr ]) -> bool {
+        pub fn set_dns(&self, addrs: &[ IpAddr ]) -> Result<bool, std::io::Error> {
             // https://00f.net/2011/08/14/programmatically-changing-network-configuration-on-osx/
             // sudo networksetup -getdnsservers "Wi-Fi"
             // sudo networksetup -setdnsservers "Wi-Fi" "Empty"
+            if unsafe { libc::getuid() } != 0 {
+                return Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied));
+            }
+
             let store = SCDynamicStoreBuilder::new(SESSION_NAME).build();
 
             let mut dns_dictionary = CFMutableDictionary::new();
@@ -349,7 +358,8 @@ mod platform {
             let dns_dictionary = dns_dictionary.as_CFType().downcast::<CFDictionary>().unwrap();
             
             let key = format!("Setup:/Network/Service/{}/DNS", self.id());
-            store.set(key.as_ref(), dns_dictionary)
+            
+            Ok(store.set(key.as_ref(), dns_dictionary))
         }
 
         pub fn interface(&self) -> Option<SCNetworkInterface> {
