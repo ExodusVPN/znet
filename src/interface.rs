@@ -194,7 +194,7 @@ impl fmt::Display for Interface {
     }
 }
 
-fn fill (ifaddr: &InterfaceAddress, iface: &mut Interface){
+fn fill(ifaddr: &InterfaceAddress, iface: &mut Interface){
     if ifaddr.address.is_some() {
         let sock_addr = ifaddr.address.unwrap();
         match sock_addr {

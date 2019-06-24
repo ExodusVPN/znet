@@ -86,11 +86,6 @@ unsafe fn sa_to_addr(sa: *mut sys::sockaddr) -> (RouteAddr, *mut u8) {
 
 fn req(family: sys::c_int, flags: sys::c_int) -> Result<(*mut u8, usize), ()> {
     let mut mib: [sys::c_int; 6] = [0; 6];
-    // let family = sys::AF_INET;
-    // let family = sys::AF_INET6;
-    // let family = 0;  // inet4 & inet6
-    // let flags = 0;
-
     let mut lenp: sys::size_t = 0;
 
     mib[0] = sys::CTL_NET;
@@ -120,6 +115,8 @@ fn req(family: sys::c_int, flags: sys::c_int) -> Result<(*mut u8, usize), ()> {
 }
 
 pub fn iter() -> Result<RouteTableMessageIter, ()> {
+    // let family = sys::AF_INET;
+    // let family = sys::AF_INET6;
     let family = 0;  // inet4 & inet6
     let flags = 0;
     let (buf_ptr, len) = req(family, flags)?;
