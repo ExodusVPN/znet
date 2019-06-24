@@ -123,16 +123,34 @@ mod platform {
     }
 
     impl NetworkGlobal {
-        pub fn service(&self) -> Option<SCNetworkService> {
-            None
-        }
+        /// 需要 Root 权限
+        pub fn set_global_dns(&self, addrs: &[ IpAddr ]) -> bool {
+            // https://00f.net/2011/08/14/programmatically-changing-network-configuration-on-osx/
+            let store = SCDynamicStoreBuilder::new(SESSION_NAME).build();
 
-        pub fn interface(&self) -> Option<SCNetworkInterface> {
-            None
-        }
+            let mut dns_dictionary = CFMutableDictionary::new();
+            let d_keys = CFString::from_static_string("ServerAddresses");
+            let d_values = CFArray::from_CFTypes(
+                                &addrs
+                                .iter()
+                                .map(|s| CFString::new(&format!("{}", s)) )
+                                .collect::<Vec<CFString>>());
+            
+            dns_dictionary.add(
+                &d_keys.as_concrete_TypeRef().as_void_ptr(),
+                &d_values.as_concrete_TypeRef().as_void_ptr());
+            let dns_dictionary = dns_dictionary.as_CFType().downcast::<CFDictionary>().unwrap();
 
-        pub fn router(&self) -> Option<IpAddr> {
-            None
+            let pattern = "State:/Network/(Service/.+|Global)/DNS";
+            match store.get_keys(pattern) {
+                Some(keys) => {
+                    for item in keys.iter() {
+                        store.set(item.clone(), dns_dictionary.clone());
+                    }
+                    true
+                },
+                None => false,
+            }
         }
     }
 
@@ -310,7 +328,11 @@ mod platform {
             }
         }
 
-        pub fn set_dns(&self, addrs: Vec<IpAddr>) -> bool {
+        /// 需要 ROOT 权限执行
+        pub fn set_dns(&self, addrs: &[ IpAddr ]) -> bool {
+            // https://00f.net/2011/08/14/programmatically-changing-network-configuration-on-osx/
+            // sudo networksetup -getdnsservers "Wi-Fi"
+            // sudo networksetup -setdnsservers "Wi-Fi" "Empty"
             let store = SCDynamicStoreBuilder::new(SESSION_NAME).build();
 
             let mut dns_dictionary = CFMutableDictionary::new();
@@ -325,13 +347,9 @@ mod platform {
                 &d_keys.as_concrete_TypeRef().as_void_ptr(),
                 &d_values.as_concrete_TypeRef().as_void_ptr());
             let dns_dictionary = dns_dictionary.as_CFType().downcast::<CFDictionary>().unwrap();
-
+            
             let key = format!("Setup:/Network/Service/{}/DNS", self.id());
-            if store.set(key.as_ref(), dns_dictionary) {
-                true
-            } else {
-                false
-            }
+            store.set(key.as_ref(), dns_dictionary)
         }
 
         pub fn interface(&self) -> Option<SCNetworkInterface> {

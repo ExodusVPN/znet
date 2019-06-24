@@ -13,7 +13,7 @@ cfg_if! {
     }
 }
 
-use sys;
+use crate::sys;
 
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
@@ -275,7 +275,7 @@ impl RawSocket {
         }
     }
 
-    fn set_option(fd: sys::c_int, option: sys::c_ulong, value: sys::uint32_t) -> Result<(), io::Error>{
+    fn set_option(fd: sys::c_int, option: sys::c_ulong, value: u32) -> Result<(), io::Error>{
         let ret = unsafe { sys::ioctl(fd, option, &value) };
         if ret < 0 {
             Err(io::Error::last_os_error())
@@ -298,8 +298,8 @@ impl RawSocket {
         }
     }
 
-    fn get_link_layer(fd: sys::c_int) -> Result<sys::uint32_t, io::Error> {
-        let dlt: sys::uint32_t = 0;
+    fn get_link_layer(fd: sys::c_int) -> Result<u32, io::Error> {
+        let dlt: u32 = 0;
 
         let ret = unsafe { sys::ioctl(fd, sys::BIOCGDLT, &dlt) };
         if ret < 0 {
@@ -310,7 +310,7 @@ impl RawSocket {
     }
 
     #[allow(dead_code)]
-    fn set_link_layer(fd: sys::c_int, dlt: sys::uint32_t) -> Result<(), io::Error> {
+    fn set_link_layer(fd: sys::c_int, dlt: u32) -> Result<(), io::Error> {
         let ret = unsafe { sys::ioctl(fd, sys::BIOCSDLT, &dlt) };
         if ret < 0 {
             Err(io::Error::last_os_error())

@@ -1,6 +1,6 @@
-
 use libc;
-use sys;
+
+use crate::sys;
 
 use std::str;
 use std::io;
@@ -69,19 +69,19 @@ pub struct ifreq {
 // This structure gets passed by the SIOCADDRT and SIOCDELRT calls.
 #[repr(C)]
 pub struct rtentry {
-    pub rt_pad1: libc::c_ulong,
-    pub rt_dst: libc::sockaddr,       // target address
+    pub rt_pad1:    libc::c_ulong,
+    pub rt_dst:     libc::sockaddr,   // target address
     pub rt_gateway: libc::sockaddr,   // gateway addr (RTF_GATEWAY)
     pub rt_genmask: libc::sockaddr,   // target network mask (IP)
-    pub rt_flags: libc::c_ushort,
-    pub rt_pad2: libc::c_short,
-    pub rt_pad3: libc::c_ulong,
-    pub rt_pad4: *const libc::c_void,
-    pub rt_metric: libc::c_short,     // +1 for binary compatibility!
+    pub rt_flags:   libc::c_ushort,
+    pub rt_pad2:    libc::c_short,
+    pub rt_pad3:    libc::c_ulong,
+    pub rt_pad4:    *const libc::c_void,
+    pub rt_metric:  libc::c_short,    // +1 for binary compatibility!
     
     // char __user *rt_dev
-    // pub rt_dev: *const ,              // forcing the device at add
-
+    // pub rt_dev: *const ,           // forcing the device at add
+    
     pub rt_mtu: libc::c_ulong,        // per route MTU/Window
     // pub rt_mss: rt_mtu,            // Compatibility :-(
     pub rt_window: libc::c_ulong,     // Window clamping

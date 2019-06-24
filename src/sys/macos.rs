@@ -1,6 +1,6 @@
 
 use libc;
-use sys;
+use crate::sys;
 
 use std::str;
 use std::io;
@@ -69,7 +69,7 @@ pub struct rt_msghdr {
     pub rtm_seq: libc::c_int,       // for sender to identify action
     pub rtm_errno: libc::c_int,     // why failed
     pub rtm_use: libc::c_int,       // from rtentry
-    pub rtm_inits: libc::uint32_t,  // which metrics we are initializing
+    pub rtm_inits: u32,  // which metrics we are initializing
     pub rtm_rmx: rt_metrics,        // metrics themselves
 }
 
@@ -79,18 +79,18 @@ pub struct rt_msghdr {
 #[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct rt_metrics {
-    pub rmx_locks: libc::uint32_t,       // Kernel leaves these values alone
-    pub rmx_mtu: libc::uint32_t,         // MTU for this path
-    pub rmx_hopcount: libc::uint32_t,    // max hops expected
-    pub rmx_expire: libc::int32_t,       // lifetime for route, e.g. redirect
-    pub rmx_recvpipe: libc::uint32_t,    // inbound delay-bandwidth product
-    pub rmx_sendpipe: libc::uint32_t,    // outbound delay-bandwidth product
-    pub rmx_ssthresh: libc::uint32_t,    // outbound gateway buffer limit
-    pub rmx_rtt: libc::uint32_t,         // estimated round trip time
-    pub rmx_rttvar: libc::uint32_t,      // estimated rtt variance
-    pub rmx_pksent: libc::uint32_t,      // packets sent using this route
-    pub rmx_state: libc::uint32_t,       // route state
-    pub rmx_filler: [libc::uint32_t; 3], // will be used for T/TCP later
+    pub rmx_locks: u32,       // Kernel leaves these values alone
+    pub rmx_mtu: u32,         // MTU for this path
+    pub rmx_hopcount: u32,    // max hops expected
+    pub rmx_expire: i32,       // lifetime for route, e.g. redirect
+    pub rmx_recvpipe: u32,    // inbound delay-bandwidth product
+    pub rmx_sendpipe: u32,    // outbound delay-bandwidth product
+    pub rmx_ssthresh: u32,    // outbound gateway buffer limit
+    pub rmx_rtt: u32,         // estimated round trip time
+    pub rmx_rttvar: u32,      // estimated rtt variance
+    pub rmx_pksent: u32,      // packets sent using this route
+    pub rmx_state: u32,       // route state
+    pub rmx_filler: [u32; 3], // will be used for T/TCP later
 }
 
 #[repr(C)]
@@ -103,11 +103,11 @@ pub struct rt_msghdr2 {
     pub rtm_index: libc::c_ushort,    // index for associated ifp
     pub rtm_flags: libc::c_int,       // flags, incl. kern & message, e.g. DONE
     pub rtm_addrs: libc::c_int,       // bitmask identifying sockaddrs in msg
-    pub rtm_refcnt: libc::int32_t,    // reference count
+    pub rtm_refcnt: i32,    // reference count
     pub rtm_parentflags: libc::c_int, // which metrics we are initializing
     pub rtm_reserved: libc::c_int,    // metrics themselves
     pub rtm_use: libc::c_int,         // from rtentry
-    pub rtm_inits: libc::uint32_t,    // which metrics we are initializing
+    pub rtm_inits: u32,    // which metrics we are initializing
     pub rtm_rmx: rt_metrics,          // metrics themselves
 }
 
@@ -117,13 +117,13 @@ pub struct rt_msghdr2 {
 #[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct rt_reach_info {
-    pub ri_refcnt: libc::uint32_t,     // reference count
-    pub ri_probes: libc::uint32_t,     // total # of probes
-    pub ri_snd_expire: libc::uint64_t, // tx expiration (calendar) time
-    pub ri_rcv_expire: libc::uint64_t, // rx expiration (calendar) time
-    pub ri_rssi: libc::int32_t,        // received signal strength
-    pub ri_lqm: libc::int32_t,         // link quality metric
-    pub ri_npm: libc::int32_t,         // node proximity metric
+    pub ri_refcnt: u32,     // reference count
+    pub ri_probes: u32,     // total # of probes
+    pub ri_snd_expire: u64, // tx expiration (calendar) time
+    pub ri_rcv_expire: u64, // rx expiration (calendar) time
+    pub ri_rssi: i32,        // received signal strength
+    pub ri_lqm: i32,         // link quality metric
+    pub ri_npm: i32,         // node proximity metric
 }
 
 // Extended routing message header (private).
@@ -134,15 +134,15 @@ pub struct rt_msghdr_ext {
     pub rtm_msglen: libc::c_ushort,   // to skip over non-understood messages
     pub rtm_version: libc::c_uchar,   // future binary compatibility
     pub rtm_type: libc::c_uchar,      // message type 
-    pub rtm_index: libc::uint32_t,    // index for associated ifp
-    pub rtm_flags: libc::uint32_t,    // flags, incl. kern & message, e.g. DONE
-    pub rtm_reserved: libc::uint32_t, // for future use
-    pub rtm_addrs: libc::uint32_t,    // bitmask identifying sockaddrs in msg
+    pub rtm_index: u32,    // index for associated ifp
+    pub rtm_flags: u32,    // flags, incl. kern & message, e.g. DONE
+    pub rtm_reserved: u32, // for future use
+    pub rtm_addrs: u32,    // bitmask identifying sockaddrs in msg
     pub rtm_pid: libc::pid_t,         // identify sender
     pub rtm_seq: libc::c_int,         // for sender to identify action
     pub rtm_errno: libc::c_int,       // why failed
-    pub rtm_use: libc::uint32_t,      // from rtentry
-    pub rtm_inits: libc::uint32_t,    // which metrics we are initializing
+    pub rtm_use: u32,      // from rtentry
+    pub rtm_inits: u32,    // which metrics we are initializing
     pub rtm_rmx: rt_metrics,          // metrics themselves
     pub rtm_ri: rt_reach_info,        // route reachability info
 }

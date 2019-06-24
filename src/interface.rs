@@ -3,9 +3,10 @@ use nix::ifaddrs::{InterfaceAddress, getifaddrs};
 use nix::net::if_::InterfaceFlags;
 use nix::sys::socket::SockAddr;
 
-use sys;
 use smoltcp;
 use smoltcp::wire::{IpAddress, Ipv6Address, IpCidr, Ipv4Cidr, Ipv6Cidr, EthernetAddress};
+
+use crate::sys;
 
 use std::{io, fmt};
 use std::ffi::CString;
@@ -268,7 +269,7 @@ fn fill (ifaddr: &InterfaceAddress, iface: &mut Interface){
     }
 }
 
-pub fn interfaces () -> Vec<Interface> {
+pub fn interfaces() -> Vec<Interface> {
     let mut ifaces: Vec<Interface> = vec![];
     for ifaddr in getifaddrs().unwrap() {
         let name: String = ifaddr.interface_name.clone();
@@ -286,19 +287,19 @@ pub fn interfaces () -> Vec<Interface> {
             let if_index = sys::if_name_to_index(&name);
             let if_mtu   = sys::if_name_to_mtu(&name).unwrap();
             let mut iface = Interface {
-                name : name.clone(),
-                index: if_index as u32,
-                flags: ifaddr.flags,
-                mtu  : if_mtu as u32,
-
+                name     : name.clone(),
+                index    : if_index as u32,
+                flags    : ifaddr.flags,
+                mtu      : if_mtu as u32,
                 hwaddr   : None,
                 dstaddr  : None,
-                addrs: vec![],
+                addrs    : vec![],
             };
             fill(&ifaddr, &mut iface);
             ifaces.push(iface);
         }
     }
+
     ifaces
 }
 
