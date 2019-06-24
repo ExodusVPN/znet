@@ -176,7 +176,7 @@ void read_packets(int fd) {
 
     // printf("size of bpf_hdr: %i\n", sizeof(a) );
     // printf("size of timeval: %i\n", sizeof(b) );
-    printf("size of bpf_hdr: %i\n", sizeof(struct bpf_hdr) );
+    printf("size of bpf_hdr: %lu\n", sizeof(struct bpf_hdr) );
     
     struct bpf_hdr* bpf_packet;
     char *bpf_buf = NULL;

@@ -13,6 +13,15 @@ type FLAG_TYPE = libc::c_ulong;
 #[cfg(target_env = "musl")]
 type FLAG_TYPE = libc::c_int;
 
+pub const CTL_NET: c_int  = 3;        // Networking
+    
+pub const NET_IPV4: c_int = 5;
+pub const NET_IPV6: c_int = 12;
+    
+pub const NET_IPV4_FORWARD: c_int    = 8;
+pub const NET_IPV6_FORWARDING: c_int = 1;
+
+
 // https://github.com/torvalds/linux/blob/master/include/uapi/linux/sockios.h
 pub const SIOCGIFADDR: FLAG_TYPE = 0x8915;
 

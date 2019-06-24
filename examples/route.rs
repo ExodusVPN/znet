@@ -1,8 +1,9 @@
-extern crate net2;
+extern crate znet;
 
 
 fn main() {
-    for msg in net2::route::iter().unwrap() {
+    for msg in znet::route::iter().unwrap() {
         println!("{:?}  -->  {:?}", msg.dest, msg.gateway);
+        println!("{:?}", msg.hdr);
     }
 }

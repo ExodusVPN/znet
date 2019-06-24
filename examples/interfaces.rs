@@ -1,4 +1,4 @@
-extern crate net2;
+extern crate znet;
 
 use std::env;
 
@@ -7,10 +7,10 @@ fn main(){
     let _ = args.next().unwrap();
     
     if let Some(ifname) = args.next() {
-        let iface = net2::interface::Interface::with_name(&ifname).unwrap();
+        let iface = znet::interface::Interface::with_name(&ifname).unwrap();
         println!("{}", iface);
     } else {
-        let ifaces = net2::interface::interfaces();
+        let ifaces = znet::interface::interfaces();
         for x in ifaces{
             println!("{}\n", x);
         }

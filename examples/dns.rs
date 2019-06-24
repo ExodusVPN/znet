@@ -1,20 +1,20 @@
-extern crate net2;
+extern crate znet;
 
 use std::net::IpAddr;
 
 
 fn main (){
-    let network_global = net2::dns::get_network_global();
+    let network_global = znet::dns::get_network_global();
     println!("NetworkGlobal: {:?}", network_global);
     
     // 设置全局 DNS, 需要 Root 权限
     // network_global.set_global_dns("8.8.4.4".parse::<IpAddr>().unwrap());
 
-    for service in net2::dns::list_network_services_order() {
+    for service in znet::dns::list_network_services_order() {
         println!("NetworkService: {:?}\n\n", service);
     }
     
-    println!("{:?}", net2::dns::list_network_interfaces());
+    println!("{:?}", znet::dns::list_network_interfaces());
 
     println!("{:?}", network_global.service.dns());
 

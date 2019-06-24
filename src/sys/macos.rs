@@ -149,6 +149,28 @@ pub struct rt_msghdr_ext {
 }
 
 
+// Routing statistics.
+#[allow(non_snake_case)]
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct rtstat {
+    pub rts_badredirect : libc::c_short, // bogus redirect calls
+    pub rts_dynamic     : libc::c_short, // routes created by redirects
+    pub rts_newgateway  : libc::c_short, // routes modified by redirects
+    pub rts_unreach     : libc::c_short, // lookups which failed
+    pub rts_wildcard    : libc::c_short, // lookups satisfied by a wildcard
+    pub rts_badrtgwroute: libc::c_short, // route to gateway is not direct
+}
+
+#[allow(non_snake_case)]
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct rt_addrinfo {
+    pub rti_addrs: libc::c_int,
+    pub rti_info : [ *mut libc::sockaddr; libc::RTAX_MAX as usize ],
+}
+
+
 pub fn if_name_to_index(ifname: &str) -> u32 {
     unsafe { sys::if_nametoindex(CString::new(ifname).unwrap().as_ptr()) }
 }
