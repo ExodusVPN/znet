@@ -357,14 +357,14 @@ impl RawSocket {
     pub fn with_ifname(ifname: &str) -> Result<RawSocket, io::Error> {
         match RawSocket::open_bpf() {
             Ok(bpf_fd) => {
+                let mtu = sys::if_name_to_mtu(ifname)?;
+                
                 RawSocket::set_option(bpf_fd, sys::BIOCSHDRCMPLT, 1).unwrap();
                 RawSocket::set_option(bpf_fd, sys::BIOCSSEESENT, 1).unwrap();
                 RawSocket::set_option(bpf_fd, sys::BIOCIMMEDIATE, 1).unwrap();
-                RawSocket::set_option(bpf_fd, sys::BIOCSBLEN, 1024*100).unwrap();
+                RawSocket::set_option(bpf_fd, sys::BIOCSBLEN, mtu as u32).unwrap();
                 RawSocket::set_timeout(bpf_fd, Duration::from_secs(3)).unwrap();
                 
-                
-
                 let mut iface: sys::ifreq = unsafe { mem::zeroed() };
                 for (i, byte) in ifname.bytes().enumerate() {
                     iface.ifr_name[i] = byte as sys::c_char;
